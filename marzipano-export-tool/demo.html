@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marzipano Export Tool - Demo Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+        }
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+        .btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .btn.success {
+            background: #28a745;
+        }
+        .btn.success:hover {
+            background: #218838;
+        }
+        .setup-steps {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .step {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-left: 4px solid #007bff;
+            background: white;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 Marzipano Export Tool</h1>
+        <p>Demo & Setup Verification</p>
+    </div>
+
+    <div id="statusContainer">
+        <!-- Status checks will be populated here -->
+    </div>
+
+    <div class="setup-steps">
+        <h2>🚀 Quick Setup Guide</h2>
+        
+        <div class="step">
+            <h3>1. Build Marzipano Library</h3>
+            <p>Make sure the Marzipano library is built and accessible:</p>
+            <div class="code">cd path/to/marzipano<br>npm install<br>npm run dev</div>
+            <p>This creates <code>build/marzipano.js</code> which the tool requires.</p>
+        </div>
+
+        <div class="step">
+            <h3>2. Start Local Server</h3>
+            <p>The tool needs to run on a local server for file handling:</p>
+            <div class="code"># Using Python<br>python -m http.server 8080<br><br># Using Node.js<br>npx http-server<br><br># Using PHP<br>php -S localhost:8080</div>
+        </div>
+
+        <div class="step">
+            <h3>3. Prepare Test Images</h3>
+            <p>For best results, use equirectangular panorama images (2:1 aspect ratio):</p>
+            <ul>
+                <li>360° photos from smartphones or cameras</li>
+                <li>Rendered panoramas from 3D software</li>
+                <li>Downloaded panoramas from stock photo sites</li>
+            </ul>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin: 3rem 0;">
+        <a href="index.html" class="btn success">🎯 Launch Export Tool</a>
+        <a href="https://www.marzipano.net/demos.html" class="btn" target="_blank">📖 View Marzipano Demos</a>
+    </div>
+
+    <script>
+        // Check if required dependencies are available
+        function checkStatus() {
+            const statusContainer = document.getElementById('statusContainer');
+            const checks = [];
+
+            // Check if Marzipano is available
+            if (typeof Marzipano !== 'undefined') {
+                checks.push({
+                    status: 'success',
+                    message: '✅ Marzipano library is loaded and ready'
+                });
+            } else {
+                checks.push({
+                    status: 'warning',
+                    message: '⚠️ Marzipano library not found. Make sure marzipano.js is built and accessible.'
+                });
+            }
+
+            // Check if JSZip is available (loaded from CDN)
+            if (typeof JSZip !== 'undefined') {
+                checks.push({
+                    status: 'success',
+                    message: '✅ JSZip library is available for export functionality'
+                });
+            } else {
+                checks.push({
+                    status: 'warning',
+                    message: '⚠️ JSZip will be loaded from CDN when needed'
+                });
+            }
+
+            // Check for modern browser features
+            if (window.File && window.FileReader && window.FileList && window.Blob) {
+                checks.push({
+                    status: 'success',
+                    message: '✅ Browser supports file handling (drag & drop, file reading)'
+                });
+            } else {
+                checks.push({
+                    status: 'error',
+                    message: '❌ Browser lacks file handling support. Please use a modern browser.'
+                });
+            }
+
+            // Check for WebGL support
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                checks.push({
+                    status: 'success',
+                    message: '✅ WebGL is supported for 3D panorama rendering'
+                });
+            } else {
+                checks.push({
+                    status: 'error',
+                    message: '❌ WebGL not supported. Marzipano requires WebGL for rendering.'
+                });
+            }
+
+            // Check if running on local server
+            if (location.protocol === 'file:') {
+                checks.push({
+                    status: 'warning',
+                    message: '⚠️ Running from file:// protocol. Some features may not work. Please use a local server.'
+                });
+            } else {
+                checks.push({
+                    status: 'success',
+                    message: '✅ Running on HTTP server - all features should work correctly'
+                });
+            }
+
+            // Render status checks
+            statusContainer.innerHTML = checks.map(check => `
+                <div class="status ${check.status}">
+                    ${check.message}
+                </div>
+            `).join('');
+        }
+
+        // Load Marzipano if available and check status
+        const marzipanoScript = document.createElement('script');
+        marzipanoScript.src = '../build/marzipano.js';
+        marzipanoScript.onload = checkStatus;
+        marzipanoScript.onerror = checkStatus;
+        document.head.appendChild(marzipanoScript);
+
+        // Also check status immediately for other features
+        setTimeout(checkStatus, 100);
+    </script>
+</body>
+</html>

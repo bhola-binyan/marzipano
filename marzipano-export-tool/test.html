@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marzipano Export Tool - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #007bff;
+        }
+        .status {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 0.5rem;
+        }
+        .btn:hover { background: #0056b3; }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Marzipano Export Tool - Test & Debug</h1>
+    
+    <div class="test-section">
+        <h2>🔧 Issue Fixes Applied</h2>
+        <div class="status success">
+            ✅ Fixed "tourData is not defined" error by adding proper initialization
+        </div>
+        <div class="status success">
+            ✅ Added image preview modal with close button (click X or outside to close)
+        </div>
+        <div class="status success">
+            ✅ Added Escape key support for closing modals
+        </div>
+        <div class="status success">
+            ✅ Improved error handling for missing DOM elements
+        </div>
+        <div class="status success">
+            ✅ Added visual indicators for clickable image previews
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 Quick Test Instructions</h2>
+        <ol>
+            <li><strong>Start local server:</strong>
+                <pre>python -m http.server 8080
+# or
+npx http-server</pre>
+            </li>
+            <li><strong>Verify Marzipano build:</strong> Make sure <code>../build/marzipano.js</code> exists</li>
+            <li><strong>Test image upload:</strong> Use sample panorama images (equirectangular 2:1 ratio)</li>
+            <li><strong>Test image preview:</strong> Click on uploaded images to see full preview with close button</li>
+            <li><strong>Test export:</strong> Create scenes, add hotspots, and export a tour</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Browser Console Tests</h2>
+        <p>Open browser console and run these commands to test:</p>
+        <pre>// Test if Marzipano is loaded
+console.log('Marzipano available:', typeof Marzipano !== 'undefined');
+
+// Test if JSZip will load
+console.log('JSZip available:', typeof JSZip !== 'undefined');
+
+// Test WebGL support
+const canvas = document.createElement('canvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+console.log('WebGL supported:', !!gl);
+
+// Test File API support
+console.log('File API supported:', !!(window.File && window.FileReader));
+</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Debugging Tips</h2>
+        <ul>
+            <li><strong>tourData error:</strong> Check browser console for "tourData not found" message</li>
+            <li><strong>Image preview issues:</strong> Check if images load properly before clicking</li>
+            <li><strong>Modal problems:</strong> Press Escape key or click outside modal to close</li>
+            <li><strong>Export failures:</strong> Ensure you have scenes with images before exporting</li>
+            <li><strong>Hotspot issues:</strong> Make sure to select a scene before adding hotspots</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Sample Test Data</h2>
+        <p>For testing, you can use these types of panorama images:</p>
+        <ul>
+            <li>📱 360° photos from smartphones (usually equirectangular)</li>
+            <li>🖼️ Downloaded panoramas from sites like Unsplash or Pixabay</li>
+            <li>🎨 Rendered panoramas from 3D software (Blender, etc.)</li>
+            <li>🔍 Any 2:1 aspect ratio image will work for testing</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; margin: 3rem 0;">
+        <a href="index.html" class="btn">🚀 Launch Export Tool</a>
+        <a href="demo.html" class="btn">🔍 Check Setup Status</a>
+    </div>
+
+    <div class="test-section">
+        <h2>⚡ Quick Performance Test</h2>
+        <p>Click the button below to run a quick performance test:</p>
+        <button onclick="runPerformanceTest()" class="btn">Run Performance Test</button>
+        <div id="performanceResults"></div>
+    </div>
+
+    <script>
+        function runPerformanceTest() {
+            const results = document.getElementById('performanceResults');
+            results.innerHTML = '<p>Running tests...</p>';
+            
+            const tests = [];
+            
+            // Test 1: Marzipano availability
+            tests.push({
+                name: 'Marzipano Library',
+                status: typeof Marzipano !== 'undefined' ? 'success' : 'error',
+                message: typeof Marzipano !== 'undefined' ? 'Available' : 'Not loaded'
+            });
+            
+            // Test 2: WebGL support
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            tests.push({
+                name: 'WebGL Support',
+                status: !!gl ? 'success' : 'error',
+                message: !!gl ? 'Supported' : 'Not supported'
+            });
+            
+            // Test 3: File API
+            tests.push({
+                name: 'File API Support',
+                status: !!(window.File && window.FileReader) ? 'success' : 'error',
+                message: !!(window.File && window.FileReader) ? 'Supported' : 'Not supported'
+            });
+            
+            // Test 4: Local server detection
+            tests.push({
+                name: 'Server Protocol',
+                status: location.protocol !== 'file:' ? 'success' : 'warning',
+                message: location.protocol !== 'file:' ? 'HTTP server detected' : 'Running from file://'
+            });
+            
+            // Render results
+            results.innerHTML = tests.map(test => `
+                <div class="status ${test.status}">${test.name}: ${test.message}</div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

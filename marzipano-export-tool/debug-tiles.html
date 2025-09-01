@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tile Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #e8f5e8; }
+        .error { background-color: #f5e8e8; }
+        .warning { background-color: #fff3cd; }
+        .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .tile-preview { width: 100px; height: 50px; border: 1px solid #ccc; background-size: cover; background-position: center; }
+        input { width: 200px; padding: 5px; }
+        button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Equirectangular Tile Debug Tool</h1>
+    
+    <div class="section">
+        <h3>1. Scene Configuration</h3>
+        <label>Scene ID: <input type="text" id="sceneId" value="0-lobby_cam_view01"></label>
+        <button onclick="checkScene()">🔍 Check Scene</button>
+    </div>
+    
+    <div class="section" id="metadataSection">
+        <h3>2. Metadata Check</h3>
+        <div id="metadataResult">Click "Check Scene" to test metadata loading</div>
+    </div>
+    
+    <div class="section" id="previewSection">
+        <h3>3. Preview Image Check</h3>
+        <div id="previewResult">Waiting for scene check...</div>
+    </div>
+    
+    <div class="section" id="tilesSection">
+        <h3>4. Tile Structure Check</h3>
+        <div id="tilesResult">Waiting for metadata...</div>
+    </div>
+    
+    <div class="section" id="visualSection">
+        <h3>5. Visual Tile Test</h3>
+        <div id="tileGrid" class="tile-grid"></div>
+    </div>
+
+    <script>
+        let currentSceneId = '';
+        let metadata = null;
+
+        async function checkScene() {
+            const sceneId = document.getElementById('sceneId').value.trim();
+            if (!sceneId) {
+                alert('Please enter a scene ID');
+                return;
+            }
+            
+            currentSceneId = sceneId;
+            console.log(`🔍 Checking scene: ${sceneId}`);
+            
+            await checkMetadata();
+            await checkPreview();
+            await checkTiles();
+        }
+
+        async function checkMetadata() {
+            const metadataSection = document.getElementById('metadataSection');
+            const metadataResult = document.getElementById('metadataResult');
+            
+            try {
+                metadataResult.innerHTML = '⏳ Loading metadata...';
+                
+                const response = await fetch(`tiles/${currentSceneId}/metadata.json`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                metadata = await response.json();
+                
+                metadataSection.className = 'section success';
+                metadataResult.innerHTML = `
+                    <div><strong>✅ Metadata loaded successfully</strong></div>
+                    <pre>${JSON.stringify(metadata.tileStructure, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                metadataSection.className = 'section error';
+                metadataResult.innerHTML = `
+                    <div><strong>❌ Metadata failed to load</strong></div>
+                    <div>Error: ${error.message}</div>
+                    <div>URL: tiles/${currentSceneId}/metadata.json</div>
+                `;
+                
+                // Use fallback metadata for testing
+                metadata = {
+                    tileStructure: {
+                        type: "equirectangular",
+                        levels: [
+                            { level: 0, width: 1024, height: 512, tilesX: 2, tilesY: 1, tileSize: 512 },
+                            { level: 1, width: 2048, height: 1024, tilesX: 4, tilesY: 2, tileSize: 512 },
+                            { level: 2, width: 4096, height: 2048, tilesX: 8, tilesY: 4, tileSize: 512 },
+                            { level: 3, width: 8192, height: 4096, tilesX: 16, tilesY: 8, tileSize: 512 }
+                        ]
+                    }
+                };
+                
+                metadataResult.innerHTML += `
+                    <div class="warning">🔄 Using fallback metadata structure for testing:</div>
+                    <pre>${JSON.stringify(metadata.tileStructure, null, 2)}</pre>
+                `;
+            }
+        }
+
+        async function checkPreview() {
+            const previewSection = document.getElementById('previewSection');
+            const previewResult = document.getElementById('previewResult');
+            
+            const previewUrl = `tiles/${currentSceneId}/preview.jpg`;
+            
+            try {
+                previewResult.innerHTML = '⏳ Checking preview image...';
+                
+                const response = await fetch(previewUrl, { method: 'HEAD' });
+                
+                if (response.ok) {
+                    previewSection.className = 'section success';
+                    previewResult.innerHTML = `
+                        <div><strong>✅ Preview image available</strong></div>
+                        <div>URL: ${previewUrl}</div>
+                        <img src="${previewUrl}" style="max-width: 300px; max-height: 150px; border: 1px solid #ccc;">
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+            } catch (error) {
+                previewSection.className = 'section error';
+                previewResult.innerHTML = `
+                    <div><strong>❌ Preview image not accessible</strong></div>
+                    <div>Error: ${error.message}</div>
+                    <div>URL: ${previewUrl}</div>
+                `;
+            }
+        }
+
+        async function checkTiles() {
+            const tilesSection = document.getElementById('tilesSection');
+            const tilesResult = document.getElementById('tilesResult');
+            const tileGrid = document.getElementById('tileGrid');
+            
+            if (!metadata || !metadata.tileStructure) {
+                tilesResult.innerHTML = '❌ No metadata available for tile checking';
+                return;
+            }
+            
+            tilesResult.innerHTML = '⏳ Checking tile structure...';
+            tileGrid.innerHTML = '';
+            
+            let totalTiles = 0;
+            let successfulTiles = 0;
+            let results = [];
+            
+            for (let level of metadata.tileStructure.levels) {
+                const levelResults = {
+                    level: level.level,
+                    expected: level.tilesX * level.tilesY,
+                    found: 0,
+                    urls: []
+                };
+                
+                // Check tiles for this level
+                for (let y = 0; y < level.tilesY; y++) {
+                    for (let x = 0; x < level.tilesX; x++) {
+                        const tileIndex = y * level.tilesX + x;
+                        const tileUrl = `tiles/${currentSceneId}/${level.level}/${tileIndex}.jpg`;
+                        
+                        try {
+                            const response = await fetch(tileUrl, { method: 'HEAD' });
+                            if (response.ok) {
+                                levelResults.found++;
+                                successfulTiles++;
+                                
+                                // Add visual preview for level 0-1 tiles
+                                if (level.level <= 1) {
+                                    const tileDiv = document.createElement('div');
+                                    tileDiv.className = 'tile-preview';
+                                    tileDiv.style.backgroundImage = `url(${tileUrl})`;
+                                    tileDiv.title = `Level ${level.level}, Tile ${tileIndex} (${x},${y})`;
+                                    tileGrid.appendChild(tileDiv);
+                                }
+                            }
+                            levelResults.urls.push({ url: tileUrl, status: response.status, exists: response.ok });
+                        } catch (error) {
+                            levelResults.urls.push({ url: tileUrl, status: 'error', exists: false });
+                        }
+                        
+                        totalTiles++;
+                    }
+                }
+                
+                results.push(levelResults);
+            }
+            
+            // Display results
+            const successRate = totalTiles > 0 ? (successfulTiles / totalTiles * 100).toFixed(1) : 0;
+            
+            if (successfulTiles === totalTiles && totalTiles > 0) {
+                tilesSection.className = 'section success';
+            } else if (successfulTiles > 0) {
+                tilesSection.className = 'section warning';
+            } else {
+                tilesSection.className = 'section error';
+            }
+            
+            let resultHtml = `
+                <div><strong>📊 Tile Check Results</strong></div>
+                <div>Success Rate: ${successfulTiles}/${totalTiles} (${successRate}%)</div>
+                <br>
+            `;
+            
+            for (let result of results) {
+                const levelSuccess = result.found === result.expected;
+                resultHtml += `
+                    <div>
+                        <strong>Level ${result.level}:</strong> ${result.found}/${result.expected} tiles
+                        ${levelSuccess ? '✅' : '❌'}
+                    </div>
+                `;
+            }
+            
+            tilesResult.innerHTML = resultHtml;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "exportType": "tiled-panoramas-with-hotspots",
+  "version": "1.0",
+  "exportTool": "Marzipano Export Tool",
+  "exportDate": "2025-08-29T09:00:01.839Z",
+  "settings": {
+    "title": "My Virtual Tour",
+    "description": "An amazing virtual tour experience",
+    "startingScene": null,
+    "autorotate": false,
+    "maxFov": 100,
+    "mouseViewMode": "drag"
+  },
+  "scenes": [
+    {
+      "id": "id_mdrlvtsvg",
+      "name": "Scene Lobby_Cam_View12.png",
+      "folder": "0-Scene_Lobby_Cam_View12_png",
+      "hotspotCount": 0
+    }
+  ],
+  "tileFormat": {
+    "type": "equirectangular",
+    "projection": "spherical",
+    "levels": 4,
+    "tileSize": 512,
+    "imageFormat": "jpeg",
+    "quality": 0.85,
+    "preview": {
+      "width": 1024,
+      "height": 512,
+      "filename": "preview.jpg",
+      "description": "Low-resolution equirectangular preview (2:1 aspect ratio)"
+    }
+  },
+  "hotspotEmbedding": {
+    "embedded": true,
+    "visibleOnLevels": [
+      2,
+      3
+    ],
+    "markerStyle": "circle-with-icon"
+  }
+}

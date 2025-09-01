@@ -16,7 +16,10 @@
   "scripts": {
     "test": "testem ci",
     "livetest": "testem",
-    "dev": "scripts/dev",
+    "dev": "npm run prebuild && concurrently \"npm run build:watch\" \"npm run serve\"",
+    "prebuild": "node -e \"const fs = require('fs'); if (!fs.existsSync('build')) fs.mkdirSync('build');\"",
+    "build:watch": "watchify -v -d --noparse=node_modules/**/*.js -s Marzipano -o build/marzipano.js src/index.js",
+    "serve": "lrhs -b -w src/**/*.js,demos/**/*.js,demos/**/*.css,demos/**/*.html,build/*",
     "release": "scripts/release",
     "deploy": "scripts/deploy",
     "prepublishOnly": "scripts/prepublish"
@@ -30,6 +33,7 @@
   "devDependencies": {
     "browserify": "^17.0.0",
     "chai": "^4.2.0",
+    "concurrently": "^9.2.1",
     "jsdoc": "^3.6.6",
     "lr-http-server": "^0.1.5",
     "mocha": "^8.2.1",

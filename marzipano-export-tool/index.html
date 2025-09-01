@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marzipano Export Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🌐 Marzipano Export Tool</h1>
+            <p>Create and export virtual tours as standalone web applications</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar">
+                <ul class="nav-tabs">
+                    <li><a href="#images" class="tab-link active" data-tab="images">📷 Images</a></li>
+                    <li><a href="#scenes" class="tab-link" data-tab="scenes">🎬 Scenes</a></li>
+                    <li><a href="#hotspots" class="tab-link" data-tab="hotspots">📍 Hotspots</a></li>
+                    <li><a href="#settings" class="tab-link" data-tab="settings">⚙️ Settings</a></li>
+                    <li><a href="#preview" class="tab-link" data-tab="preview">👁️ Preview</a></li>
+                    <li><a href="#export" class="tab-link" data-tab="export">📦 Export</a></li>
+                </ul>
+            </nav>
+
+            <!-- Content Area -->
+            <main class="content">
+                <!-- Images Tab -->
+                <div id="images" class="tab-content active">
+                    <h2>Add Panorama Images</h2>
+                    <div class="upload-area">
+                        <input type="file" id="imageUpload" multiple accept="image/*" hidden>
+                        <div class="drop-zone" id="dropZone">
+                            <div class="drop-content">
+                                <div class="drop-icon">📁</div>
+                                <p>Drag & drop panorama images here or <button type="button" onclick="document.getElementById('imageUpload').click()">browse files</button></p>
+                                <small>Supported formats: JPG, PNG • Recommended: Equirectangular 2:1 aspect ratio</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="images-list" id="imagesList">
+                        <!-- Dynamic content will be added here -->
+                    </div>
+                </div>
+
+                <!-- Scenes Tab -->
+                <div id="scenes" class="tab-content">
+                    <h2>Manage Scenes</h2>
+                    <div class="scenes-toolbar">
+                        <button class="btn btn-primary" id="addSceneBtn">+ Add Scene</button>
+                        <button class="btn btn-secondary" id="autoGenerateScenesBtn">🎯 Auto-Generate from Images</button>
+                    </div>
+                    
+                    <div class="scenes-list" id="scenesList">
+                        <!-- Dynamic content will be added here -->
+                    </div>
+                </div>
+
+                <!-- Hotspots Tab -->
+                <div id="hotspots" class="tab-content">
+                    <h2>Add Hotspots</h2>
+                    <div class="hotspot-editor">
+                        <div class="hotspot-controls">
+                            <label>
+                                Scene: 
+                                <select id="hotspotSceneSelect">
+                                    <option value="">Select a scene...</option>
+                                </select>
+                            </label>
+                            <button class="btn btn-primary" id="addHotspotBtn">+ Add Hotspot</button>
+                        </div>
+                        
+                        <div class="hotspot-preview" id="hotspotPreview">
+                            <div class="preview-viewport" id="previewViewport">
+                                <p>Select a scene to add hotspots</p>
+                            </div>
+                        </div>
+                        
+                        <div class="hotspots-list" id="hotspotsList">
+                            <!-- Dynamic content will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-content">
+                    <h2>Tour Settings</h2>
+                    <form id="settingsForm" class="settings-form">
+                        <div class="form-group">
+                            <label for="tourTitle">Tour Title:</label>
+                            <input type="text" id="tourTitle" value="My Virtual Tour">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tourDescription">Description:</label>
+                            <textarea id="tourDescription" rows="3">An amazing virtual tour experience</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="startingScene">Starting Scene:</label>
+                            <select id="startingScene">
+                                <option value="">Select starting scene...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="autorotateEnabled"> Enable auto-rotation
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="maxFov">Maximum Field of View:</label>
+                            <input type="range" id="maxFov" min="30" max="150" value="100">
+                            <span id="maxFovValue">100°</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mouseViewMode">Mouse View Mode:</label>
+                            <select id="mouseViewMode">
+                                <option value="drag">Drag</option>
+                                <option value="qtvr">QTVR</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Preview Tab -->
+                <div id="preview" class="tab-content">
+                    <h2>Preview Tour</h2>
+                    <div class="preview-container">
+                        <div id="tourPreview" class="tour-preview">
+                            <p>Configure your scenes and settings, then click "Generate Preview"</p>
+                        </div>
+                        <div class="preview-controls">
+                            <button class="btn btn-primary" id="generatePreviewBtn">🔄 Generate Preview</button>
+                            <button class="btn btn-secondary" id="fullscreenBtn">⛶ Fullscreen</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Tab -->
+                <div id="export" class="tab-content">
+                    <h2>Export Cube Map Tiles</h2>
+                    <div class="export-options">
+                        <div class="export-info">
+                            <h3>🧊 Ready to Export Cube Map Tiles</h3>
+                            <p>Your panoramas will be exported as <strong>multi-resolution cube map tiles</strong> with <strong>hotspots embedded directly</strong> into the cube face tiles.</p>
+                            
+                            <div class="export-features">
+                                <h4>✨ What you'll get:</h4>
+                                <ul>
+                                    <li>🧊 <strong>Cube map tiles</strong> - 4 resolution levels with 6 faces ('bdflru' order)</li>
+                                    <li>🎯 <strong>Embedded hotspots</strong> - Drawn directly on high-res cube face tiles</li>
+                                    <li>🖼️ <strong>Cube map preview strip</strong> - 1024x6144 vertical strip for Marzipano</li>
+                                    <li>📋 <strong>Complete metadata</strong> - JSON files with cube map structure and hotspot data</li>
+                                    <li>🔧 <strong>Marzipano ready</strong> - Perfect integration with CubeGeometry</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="export-stats" id="exportStats">
+                                <div class="stat">
+                                    <span class="stat-label">Scenes:</span>
+                                    <span class="stat-value" id="statsScenes">0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Hotspots:</span>
+                                    <span class="stat-value" id="statsHotspots">0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Images:</span>
+                                    <span class="stat-value" id="statsImages">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="export-controls">
+                            <div class="form-group">
+                                <label for="exportName">Export Name:</label>
+                                <input type="text" id="exportName" value="cube-map-panoramas">
+                                <small>Cube map tile set with preview (.zip)</small>
+                            </div>
+                            
+                            <button class="btn btn-export" id="exportBtn">
+                                🧊 Export Cube Map Tiles (.zip)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="export-progress" id="exportProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <p id="progressText">Preparing export...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal for hotspot editing -->
+    <div id="hotspotModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Hotspot</h3>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="hotspotForm">
+                    <div class="form-group">
+                        <label for="hotspotType">Hotspot Type:</label>
+                        <select id="hotspotType">
+                            <option value="link">Link to Scene</option>
+                            <option value="info">Information</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hotspotTitle">Title:</label>
+                        <input type="text" id="hotspotTitle">
+                    </div>
+                    
+                    <div class="form-group" id="hotspotTargetGroup">
+                        <label for="hotspotTarget">Target Scene:</label>
+                        <select id="hotspotTarget">
+                            <option value="">Select target scene...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="hotspotTextGroup" style="display: none;">
+                        <label for="hotspotText">Information Text:</label>
+                        <textarea id="hotspotText" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelHotspot">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Hotspot</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../build/marzipano.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

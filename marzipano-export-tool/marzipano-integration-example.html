@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marzipano Tiled Image Integration Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+
+        #pano {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 300px;
+            z-index: 100;
+        }
+
+        .scene-button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .scene-button:hover {
+            background: #0056b3;
+        }
+
+        .scene-button.active {
+            background: #28a745;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #555;
+            font-size: 12px;
+        }
+
+        .hotspot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #007bff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .hotspot:hover {
+            background: white;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="pano"></div>
+    
+    <div class="controls">
+        <h3>🧩 Marzipano Tiled Integration</h3>
+        <p>Load your exported tiled panoramas:</p>
+        
+        <button class="scene-button" onclick="loadExportedScenes()">
+            📂 Load Exported Scenes
+        </button>
+        
+        <div id="sceneList"></div>
+        
+        <div class="info">
+            <p><strong>Instructions:</strong></p>
+            <ol>
+                <li>Export tiled images from the tool</li>
+                <li>Extract the .zip file</li>
+                <li>Place this HTML file in the same folder</li>
+                <li>Serve via HTTP server (not file://)</li>
+                <li>Click "Load Exported Scenes"</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Marzipano Library -->
+    <script src="https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js"></script>
+    
+    <script>
+        // Initialize Marzipano Viewer
+        const viewer = new Marzipano.Viewer(document.querySelector('#pano'));
+        let scenes = new Map();
+        let currentScene = null;
+
+        // Load and render exported tiled scenes
+        async function loadExportedScenes() {
+            try {
+                console.log('🔄 Loading exported scenes...');
+                
+                // Load manifest to get scene list
+                const manifest = await fetch('manifest.json').then(r => r.json());
+                console.log('📋 Manifest loaded:', manifest);
+                
+                // Clear existing scene buttons
+                const sceneList = document.getElementById('sceneList');
+                sceneList.innerHTML = '';
+                
+                // Load each scene
+                for (const sceneInfo of manifest.scenes) {
+                    await loadScene(sceneInfo);
+                    
+                    // Create scene button
+                    const button = document.createElement('button');
+                    button.className = 'scene-button';
+                    button.textContent = `🌐 ${sceneInfo.name}`;
+                    button.onclick = () => switchToScene(sceneInfo.id);
+                    sceneList.appendChild(button);
+                }
+                
+                // Switch to first scene
+                if (manifest.scenes.length > 0) {
+                    switchToScene(manifest.scenes[0].id);
+                }
+                
+                console.log('✅ All scenes loaded successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error loading scenes:', error);
+                alert('Failed to load scenes. Make sure the exported files are in the same folder and you\'re using an HTTP server.');
+            }
+        }
+
+        // Load individual scene with tiled images
+        async function loadScene(sceneInfo) {
+            try {
+                console.log(`🔄 Loading scene: ${sceneInfo.name}`);
+                
+                // Load scene metadata with fallback
+                let metadata;
+                try {
+                    metadata = await fetch(`tiles/${sceneInfo.folder}/metadata.json`).then(r => r.json());
+                    console.log(`📊 Metadata for ${sceneInfo.name}:`, metadata);
+                    
+                    // Validate metadata structure
+                    if (!metadata.tileStructure || !metadata.tileStructure.levels) {
+                        throw new Error('Invalid metadata structure');
+                    }
+                    
+                    // Log tile structure details
+                    console.log(`🔍 Tile structure:`, metadata.tileStructure);
+                    metadata.tileStructure.levels.forEach((level, index) => {
+                        console.log(`  Level ${index}:`, level);
+                    });
+                    
+                } catch (error) {
+                    console.warn(`⚠️ Failed to load metadata for ${sceneInfo.name}, using fallback:`, error.message);
+                    
+                    // Fallback metadata structure for cube map
+                    metadata = {
+                        tileStructure: {
+                            type: "cubemap",
+                            projection: "cube",
+                            faceOrder: "bdflru",
+                            levels: [
+                                { level: 0, faceSize: 512, tileSize: 512, tilesPerFace: 1, totalTilesPerFace: 1, totalTiles: 6 },
+                                { level: 1, faceSize: 1024, tileSize: 512, tilesPerFace: 4, totalTilesPerFace: 4, totalTiles: 24 },
+                                { level: 2, faceSize: 2048, tileSize: 512, tilesPerFace: 16, totalTilesPerFace: 16, totalTiles: 96 },
+                                { level: 3, faceSize: 4096, tileSize: 512, tilesPerFace: 64, totalTilesPerFace: 64, totalTiles: 384 }
+                            ],
+                            faces: ["b", "d", "f", "l", "r", "u"]
+                        },
+                        hotspots: []
+                    };
+                    
+                    console.log(`🔄 Using fallback metadata:`, metadata);
+                }
+                
+                // Create ImageUrlSource with cube map preview fallback and tiles
+                const source = new Marzipano.ImageUrlSource((tile) => {
+                    if (tile == null) {
+                        // Return cube map preview strip for fallback/initial load
+                        const previewUrl = `tiles/${sceneInfo.folder}/preview.jpg`;
+                        console.log(`🖼️ Loading cube map preview: ${previewUrl}`);
+                        return { 
+                            url: previewUrl,
+                            rect: null // Marzipano handles cube map preview strip extraction
+                        };
+                    }
+                    
+                    // Return specific cube map tile: tiles/{scene_id}/{level}/{face}/{tile_index}.jpg
+                    const levelInfo = metadata.tileStructure.levels[tile.z];
+                    if (!levelInfo) {
+                        console.error(`❌ No level info for z=${tile.z}, available levels:`, metadata.tileStructure.levels.length);
+                        return { url: `tiles/${sceneInfo.folder}/preview.jpg` };
+                    }
+                    
+                    // Debug tile properties
+                    console.log(`🧩 Tile request details:`, {
+                        z: tile.z,
+                        x: tile.x,
+                        y: tile.y,
+                        face: tile.face,
+                        levelInfo: levelInfo
+                    });
+                    
+                    // Validate tile coordinates and face
+                    if (tile.x === undefined || tile.y === undefined || !tile.face) {
+                        console.error(`❌ Invalid tile coordinates:`, { x: tile.x, y: tile.y, face: tile.face });
+                        return { url: `tiles/${sceneInfo.folder}/preview.jpg` };
+                    }
+                    
+                    // Validate tile coordinates
+                    if (isNaN(tile.x) || isNaN(tile.y)) {
+                        console.error(`❌ Invalid tile coordinates:`, { 
+                            x: tile.x, 
+                            y: tile.y
+                        });
+                        return { url: `tiles/${sceneInfo.folder}/preview.jpg` };
+                    }
+                    
+                    const tileUrl = `tiles/${sceneInfo.folder}/${tile.z}/${tile.face}/${tile.y}/${tile.x}.jpg`;
+                    console.log(`🧩 Loading cube map tile: ${tileUrl} (level: ${tile.z}, face: ${tile.face}, x: ${tile.x}, y: ${tile.y})`);
+                    return { url: tileUrl };
+                });
+                
+                // Create cube geometry from tile structure
+                const levels = metadata.tileStructure.levels.map(level => ({
+                    tileSize: level.tileSize,
+                    size: level.faceSize
+                }));
+                
+                // Use CubeGeometry for cube map tiles
+                const geometry = new Marzipano.CubeGeometry(levels);
+                
+                // Create view with initial parameters
+                const limiter = Marzipano.RectilinearView.limit.traditional(1024, 100 * Math.PI / 180);
+                const view = new Marzipano.RectilinearView(metadata.initialView, limiter);
+                
+                // Create scene
+                const scene = viewer.createScene({
+                    source: source,
+                    geometry: geometry,
+                    view: view,
+                    pinFirstLevel: true
+                });
+                
+                // Add hotspots (from metadata, since they're also embedded in images)
+                addHotspotsFromMetadata(scene, metadata.hotspots);
+                
+                // Store scene
+                scenes.set(sceneInfo.id, {
+                    scene: scene,
+                    metadata: metadata,
+                    info: sceneInfo
+                });
+                
+                console.log(`✅ Scene loaded: ${sceneInfo.name}`);
+                
+            } catch (error) {
+                console.error(`❌ Error loading scene ${sceneInfo.name}:`, error);
+                throw error;
+            }
+        }
+
+        // Add interactive hotspots from metadata
+        function addHotspotsFromMetadata(scene, hotspots) {
+            hotspots.forEach(hotspot => {
+                // Create hotspot element
+                const element = document.createElement('div');
+                element.className = 'hotspot';
+                element.title = hotspot.title || 'Hotspot';
+                
+                // Set icon based on type
+                if (hotspot.type === 'link') {
+                    element.innerHTML = '🔗';
+                    element.style.borderColor = '#007bff';
+                    element.onclick = () => {
+                        if (hotspot.target && scenes.has(hotspot.target)) {
+                            switchToScene(hotspot.target);
+                        } else {
+                            alert(`Link to: ${hotspot.target || 'Unknown'}`);
+                        }
+                    };
+                } else if (hotspot.type === 'info') {
+                    element.innerHTML = 'ℹ️';
+                    element.style.borderColor = '#28a745';
+                    element.onclick = () => {
+                        alert(hotspot.text || hotspot.title || 'Information hotspot');
+                    };
+                }
+                
+                // Add to scene
+                scene.hotspotContainer().createHotspot(element, {
+                    yaw: hotspot.coordinates.yaw,
+                    pitch: hotspot.coordinates.pitch
+                });
+            });
+        }
+
+        // Switch to specific scene
+        function switchToScene(sceneId) {
+            const sceneData = scenes.get(sceneId);
+            if (!sceneData) {
+                console.error(`Scene not found: ${sceneId}`);
+                return;
+            }
+            
+            console.log(`🎬 Switching to scene: ${sceneData.info.name}`);
+            
+            // Switch scene
+            sceneData.scene.switchTo();
+            currentScene = sceneData;
+            
+            // Update button states
+            document.querySelectorAll('.scene-button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(sceneData.info.name)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            console.log(`✅ Switched to: ${sceneData.info.name}`);
+        }
+
+        // Auto-load scenes on page load (if manifest exists)
+        window.addEventListener('load', () => {
+            // Check if manifest exists and auto-load
+            fetch('manifest.json')
+                .then(r => r.json())
+                .then(() => {
+                    console.log('🎯 Auto-loading scenes...');
+                    loadExportedScenes();
+                })
+                .catch(() => {
+                    console.log('📝 No manifest found. Use "Load Exported Scenes" button.');
+                });
+        });
+
+        // Debug functions (available in console)
+        window.debugMarzipano = {
+            viewer: viewer,
+            scenes: scenes,
+            currentScene: () => currentScene,
+            switchToScene: switchToScene,
+            loadExportedScenes: loadExportedScenes
+        };
+
+        console.log('🔧 Debug functions available: window.debugMarzipano');
+    </script>
+</body>
+</html>

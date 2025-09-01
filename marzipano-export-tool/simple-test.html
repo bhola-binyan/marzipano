@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Cube Map Test</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #viewer { width: 100vw; height: 100vh; }
+        #controls { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 5px; z-index: 1000; }
+        button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+        #status { margin-top: 10px; font-size: 14px; }
+        #debug { margin-top: 10px; font-size: 12px; max-height: 200px; overflow-y: auto; background: #333; padding: 10px; border-radius: 3px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marzipano/0.10.2/marzipano.js"></script>
+</head>
+<body>
+    <div id="viewer"></div>
+    
+    <div id="controls">
+        <h3>🧪 Simple Cube Map Test</h3>
+        <input type="text" id="sceneInput" placeholder="Scene ID (e.g., 0-Scene_Lobby_Cam_View12_png)" style="width: 300px; padding: 5px;">
+        <br>
+        <button onclick="testScene()">🔍 Test Scene</button>
+        <button onclick="testPreview()">📷 Test Preview Only</button>
+        <button onclick="clearDebug()">🧹 Clear Debug</button>
+        
+        <div id="status">Enter scene ID and click Test Scene</div>
+        <div id="debug"></div>
+    </div>
+
+    <script>
+        let viewer;
+        let debugDiv;
+
+        // Debug logging
+        function log(message, type = 'info') {
+            console.log(message);
+            if (!debugDiv) debugDiv = document.getElementById('debug');
+            
+            const emoji = type === 'error' ? '❌' : type === 'warn' ? '⚠️' : type === 'success' ? '✅' : '🔍';
+            debugDiv.innerHTML += `<div>${emoji} ${message}</div>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        function clearDebug() {
+            debugDiv.innerHTML = '';
+        }
+
+        // Initialize viewer
+        viewer = new Marzipano.Viewer(document.getElementById('viewer'));
+        log('Viewer initialized');
+
+        async function testPreview() {
+            const sceneId = document.getElementById('sceneInput').value.trim();
+            if (!sceneId) {
+                alert('Please enter a scene ID');
+                return;
+            }
+
+            const previewUrl = `tiles/${sceneId}/preview.jpg`;
+            log(`Testing preview: ${previewUrl}`);
+
+            try {
+                const response = await fetch(previewUrl, { method: 'HEAD' });
+                if (response.ok) {
+                    log(`Preview exists: ${previewUrl}`, 'success');
+                    
+                    // Test loading preview as single image
+                    const source = Marzipano.ImageUrlSource.fromString(previewUrl);
+                    const geometry = new Marzipano.EquirectGeometry([{ tileSize: 1024, size: 1024 }]);
+                    const view = new Marzipano.RectilinearView(
+                        { yaw: 0, pitch: 0, fov: Math.PI / 4 },
+                        Marzipano.RectilinearView.limit.traditional(1024, 100 * Math.PI / 180)
+                    );
+
+                    const scene = viewer.createScene({ source, geometry, view });
+                    viewer.switchScene(scene);
+                    
+                    log('Preview loaded as single image', 'success');
+                } else {
+                    log(`Preview not found: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Preview test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testScene() {
+            const sceneId = document.getElementById('sceneInput').value.trim();
+            if (!sceneId) {
+                alert('Please enter a scene ID');
+                return;
+            }
+
+            document.getElementById('status').textContent = `Testing scene: ${sceneId}`;
+            log(`=== Testing Scene: ${sceneId} ===`);
+
+            // Hard-coded cube map structure (no metadata dependency)
+            const tileStructure = {
+                levels: [
+                    { level: 0, faceSize: 512, tileSize: 512, tilesPerRow: 1 },
+                    { level: 1, faceSize: 1024, tileSize: 512, tilesPerRow: 2 },
+                    { level: 2, faceSize: 2048, tileSize: 512, tilesPerRow: 4 },
+                    { level: 3, faceSize: 4096, tileSize: 512, tilesPerRow: 8 }
+                ],
+                faces: ['b', 'd', 'f', 'l', 'r', 'u']
+            };
+
+            log(`Using tile structure: ${JSON.stringify(tileStructure)}`);
+
+            // Test a few specific cube map tile URLs first
+            const testTiles = [
+                { level: 0, face: 'b', y: 0, x: 0 },
+                { level: 0, face: 'f', y: 0, x: 0 },
+                { level: 1, face: 'b', y: 0, x: 0 },
+                { level: 1, face: 'b', y: 1, x: 1 }
+            ];
+
+            for (let testTile of testTiles) {
+                const tileUrl = `tiles/${sceneId}/${testTile.level}/${testTile.face}/${testTile.y}/${testTile.x}.jpg`;
+                try {
+                    const response = await fetch(tileUrl, { method: 'HEAD' });
+                    if (response.ok) {
+                        log(`✅ Tile exists: ${tileUrl}`, 'success');
+                    } else {
+                        log(`❌ Tile missing: ${tileUrl} (HTTP ${response.status})`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Tile error: ${tileUrl} - ${error.message}`, 'error');
+                }
+            }
+
+            // Create cube map image source with detailed logging
+            const source = new Marzipano.ImageUrlSource((tile) => {
+                if (tile == null) {
+                    const previewUrl = `tiles/${sceneId}/preview.jpg`;
+                    log(`📷 Requesting cube map preview: ${previewUrl}`);
+                    return { 
+                        url: previewUrl,
+                        rect: null // Marzipano handles cube map preview strip extraction
+                    };
+                }
+
+                // Get level info
+                const levelInfo = tileStructure.levels[tile.z];
+                if (!levelInfo) {
+                    log(`❌ No level ${tile.z} in structure`, 'error');
+                    return { url: `tiles/${sceneId}/preview.jpg` };
+                }
+
+                // Validate coordinates and face
+                if (tile.x === undefined || tile.y === undefined || !tile.face) {
+                    log(`❌ Invalid tile coordinates: x=${tile.x}, y=${tile.y}, face=${tile.face}`, 'error');
+                    return { url: `tiles/${sceneId}/preview.jpg` };
+                }
+
+                // Use direct x,y coordinate structure
+                const tileUrl = `tiles/${sceneId}/${tile.z}/${tile.face}/${tile.y}/${tile.x}.jpg`;
+                
+                log(`🧩 Cube Tile: z=${tile.z}, face=${tile.face}, x=${tile.x}, y=${tile.y} -> ${tileUrl}`);
+                return { url: tileUrl };
+            });
+
+            // Create cube geometry
+            const levels = tileStructure.levels.map(level => ({
+                tileSize: level.tileSize,
+                size: level.faceSize
+            }));
+            
+            log(`Creating cube geometry with ${levels.length} levels`);
+            const geometry = new Marzipano.CubeGeometry(levels);
+
+            // Create view
+            const view = new Marzipano.RectilinearView(
+                { yaw: 0, pitch: 0, fov: Math.PI / 4 },
+                Marzipano.RectilinearView.limit.traditional(1024, 100 * Math.PI / 180)
+            );
+
+            // Create and switch scene
+            try {
+                const scene = viewer.createScene({
+                    source: source,
+                    geometry: geometry,
+                    view: view,
+                    pinFirstLevel: true
+                });
+
+                viewer.switchScene(scene);
+                log('Scene created and switched!', 'success');
+                document.getElementById('status').textContent = `Scene loaded: ${sceneId}`;
+
+            } catch (error) {
+                log(`Scene creation failed: ${error.message}`, 'error');
+                document.getElementById('status').textContent = `Failed: ${error.message}`;
+            }
+        }
+
+        // Set default scene ID if visible in folder structure
+        document.getElementById('sceneInput').value = '0-Scene_Lobby_Cam_View12_png';
+    </script>
+</body>
+</html>

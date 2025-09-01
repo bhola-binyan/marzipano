@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Equirectangular Tiles Test</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #viewer { width: 100vw; height: 100vh; }
+        #info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; z-index: 1000; }
+        #debug { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; z-index: 1000; max-width: 300px; font-size: 12px; }
+        button { margin: 5px 0; padding: 5px 10px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marzipano/0.10.2/marzipano.js"></script>
+</head>
+<body>
+    <div id="info">
+        <h3>🌐 Equirectangular Tiles Test</h3>
+        <button onclick="loadScene()">🔄 Reload Scene</button>
+        <button onclick="testTileUrls()">🧪 Test Tile URLs</button>
+        <div id="status">Loading...</div>
+    </div>
+    
+    <div id="debug">
+        <strong>Debug Info:</strong>
+        <div id="debugOutput"></div>
+    </div>
+    
+    <div id="viewer"></div>
+
+    <script>
+        let viewer;
+        let scene;
+        let debugOutput;
+        
+        // Debug logging function
+        function log(message) {
+            console.log(message);
+            if (!debugOutput) debugOutput = document.getElementById('debugOutput');
+            debugOutput.innerHTML += '<div>' + message + '</div>';
+            // Keep only last 10 messages
+            const children = debugOutput.children;
+            if (children.length > 10) {
+                debugOutput.removeChild(children[0]);
+            }
+        }
+
+        // Initialize viewer
+        function initViewer() {
+            log('🔧 Initializing Marzipano viewer...');
+            
+            const viewerElement = document.getElementById('viewer');
+            viewer = new Marzipano.Viewer(viewerElement, {
+                controls: {
+                    mouseViewMode: 'drag'
+                }
+            });
+            
+            log('✅ Viewer initialized');
+            return viewer;
+        }
+
+        // Test if tile URLs are accessible
+        async function testTileUrls() {
+            log('🧪 Testing tile URLs...');
+            
+            // Test some common tile URLs
+            const testUrls = [
+                'tiles/0-lobby_cam_view01/preview.jpg',
+                'tiles/0-lobby_cam_view01/0/0.jpg',
+                'tiles/0-lobby_cam_view01/0/1.jpg',
+                'tiles/0-lobby_cam_view01/1/0.jpg',
+                'tiles/0-lobby_cam_view01/1/7.jpg'
+            ];
+            
+            for (let url of testUrls) {
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    log(`${response.ok ? '✅' : '❌'} ${url} - ${response.status}`);
+                } catch (error) {
+                    log(`❌ ${url} - Network Error`);
+                }
+            }
+        }
+
+        // Load the equirectangular scene
+        async function loadScene() {
+            try {
+                log('🔄 Loading equirectangular scene...');
+                document.getElementById('status').textContent = 'Loading scene...';
+                
+                if (!viewer) {
+                    initViewer();
+                }
+
+                // Try to load metadata first
+                let metadata;
+                try {
+                    log('📊 Loading metadata...');
+                    const response = await fetch('tiles/0-lobby_cam_view01/metadata.json');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    metadata = await response.json();
+                    log('✅ Metadata loaded: ' + JSON.stringify(metadata.tileStructure, null, 2));
+                } catch (error) {
+                    log('❌ Failed to load metadata: ' + error.message);
+                    // Use fallback structure
+                    metadata = {
+                        tileStructure: {
+                            type: "equirectangular",
+                            levels: [
+                                { level: 0, width: 1024, height: 512, tilesX: 2, tilesY: 1, tileSize: 512 },
+                                { level: 1, width: 2048, height: 1024, tilesX: 4, tilesY: 2, tileSize: 512 },
+                                { level: 2, width: 4096, height: 2048, tilesX: 8, tilesY: 4, tileSize: 512 },
+                                { level: 3, width: 8192, height: 4096, tilesX: 16, tilesY: 8, tileSize: 512 }
+                            ]
+                        }
+                    };
+                    log('🔄 Using fallback metadata structure');
+                }
+
+                // Create image source with detailed logging
+                log('🖼️ Creating image source...');
+                const source = new Marzipano.ImageUrlSource((tile) => {
+                    if (tile == null) {
+                        const previewUrl = 'tiles/0-lobby_cam_view01/preview.jpg';
+                        log(`📷 Requesting preview: ${previewUrl}`);
+                        return { url: previewUrl };
+                    }
+                    
+                    // Get level info
+                    const levelInfo = metadata.tileStructure.levels[tile.z];
+                    if (!levelInfo) {
+                        log(`❌ No level info for z=${tile.z}`);
+                        return { url: 'tiles/0-lobby_cam_view01/preview.jpg' };
+                    }
+                    
+                    // Calculate tile index
+                    const tileIndex = tile.y * levelInfo.tilesX + tile.x;
+                    const tileUrl = `tiles/0-lobby_cam_view01/${tile.z}/${tileIndex}.jpg`;
+                    
+                    log(`🧩 Tile request: z=${tile.z}, x=${tile.x}, y=${tile.y} -> ${tileUrl}`);
+                    return { url: tileUrl };
+                });
+
+                // Create geometry
+                log('📐 Creating equirectangular geometry...');
+                const levels = metadata.tileStructure.levels.map((level, index) => {
+                    log(`  Level ${index}: ${level.width}×${level.height}, tileSize: ${level.tileSize}`);
+                    return {
+                        tileSize: level.tileSize,
+                        size: level.width  // Use width for equirectangular
+                    };
+                });
+                
+                const geometry = new Marzipano.EquirectGeometry(levels);
+                log('✅ Geometry created with ' + levels.length + ' levels');
+
+                // Create view
+                log('👁️ Creating view...');
+                const limiter = Marzipano.RectilinearView.limit.traditional(1024, 100 * Math.PI / 180);
+                const initialView = { yaw: 0, pitch: 0, fov: Math.PI / 4 };
+                const view = new Marzipano.RectilinearView(initialView, limiter);
+                
+                // Create and switch to scene
+                log('🎬 Creating scene...');
+                scene = viewer.createScene({
+                    source: source,
+                    geometry: geometry,
+                    view: view,
+                    pinFirstLevel: true
+                });
+
+                log('🔄 Switching to scene...');
+                viewer.switchScene(scene);
+                
+                log('✅ Scene loaded successfully!');
+                document.getElementById('status').textContent = 'Scene loaded! 🎉';
+                
+            } catch (error) {
+                log('❌ Error loading scene: ' + error.message);
+                console.error('Scene loading error:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // Auto-load when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Page loaded, initializing...');
+            initViewer();
+            
+            // Try to load scene after a short delay
+            setTimeout(loadScene, 500);
+        });
+    </script>
+</body>
+</html>
