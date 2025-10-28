@@ -95,6 +95,13 @@ ImageUrlSource.prototype.loadAsset = function(stage, tile, done) {
     loadOptions.crossOrigin = this._crossOrigin;
   }
   
+  // Debug logging for CORS flow
+  console.log('🔍 ImageUrlSource.loadAsset:', {
+    url: url,
+    sourceCrossOrigin: this._crossOrigin,
+    loadOptions: loadOptions
+  });
+  
   var loadImage = stage.loadImage.bind(stage, url, rect, loadOptions);
 
   var loadFn = function(done) {

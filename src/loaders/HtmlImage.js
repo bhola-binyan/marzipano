@@ -64,6 +64,13 @@ HtmlImageLoader.prototype.loadImage = function(url, rect, done) {
 
   var img = new Image();
 
+  // Debug logging for CORS
+  console.log('🔍 HtmlImageLoader.loadImage:', {
+    url: url,
+    crossOrigin: this._crossOrigin,
+    loaderInstance: !!this
+  });
+
   // Allow cross-domain image loading.
   // This is required to be able to create WebGL textures from images fetched
   // from a different domain. Note that setting the crossorigin attribute to
@@ -76,6 +83,9 @@ HtmlImageLoader.prototype.loadImage = function(url, rect, done) {
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   if (this._crossOrigin) {
     img.crossOrigin = this._crossOrigin;
+    console.log('✅ Set img.crossOrigin to:', img.crossOrigin);
+  } else {
+    console.log('❌ No crossOrigin set, this._crossOrigin is:', this._crossOrigin);
   }
 
   var x = rect && rect.x || 0;

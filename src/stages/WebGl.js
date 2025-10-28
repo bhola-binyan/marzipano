@@ -181,13 +181,23 @@ WebGlStage.prototype.loadImage = function(url, rect, opts, done) {
   }
   opts = opts || {};
   
+  // Debug logging for CORS flow
+  console.log('🔍 WebGlStage.loadImage:', {
+    url: url,
+    opts: opts,
+    currentLoaderCrossOrigin: this._loader._crossOrigin,
+    needsTempLoader: opts.crossOrigin !== undefined && opts.crossOrigin !== this._loader._crossOrigin
+  });
+  
   // If crossOrigin is specified and different from current loader setting,
   // create a temporary loader with the specified setting
   if (opts.crossOrigin !== undefined && opts.crossOrigin !== this._loader._crossOrigin) {
+    console.log('✅ Creating temp loader with crossOrigin:', opts.crossOrigin);
     var tempLoader = new HtmlImageLoader(this, { crossOrigin: opts.crossOrigin });
     return tempLoader.loadImage(url, rect, done);
   }
   
+  console.log('✅ Using default loader');
   return this._loader.loadImage(url, rect, done);
 };
 
