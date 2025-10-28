@@ -222,6 +222,8 @@ Stage.prototype.setSizeForType = function(size) {
  * @param {string} url The image URL.
  * @param {?Rect} rect A {@link Rect} describing a portion of the image, or null
  *     to use the full image.
+ * @param {Object} [opts] Loading options.
+ * @param {string} [opts.crossOrigin] Cross-origin mode for image loading.
  * @param {function(?Error, Asset)} done The callback.
  * @return {function()} A function to cancel loading.
  */

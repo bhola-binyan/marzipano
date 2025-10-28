@@ -58,6 +58,8 @@ var defaultRetryDelay = 10000;
  *     the same time. The limit is per {@link ImageSourceUrl} instance.
  * @param {number} [opts.retryDelay=10000] Time in milliseconds to wait before
  *     retrying a failed request.
+ * @param {string} [opts.crossOrigin] Cross-origin mode for image loading.
+ *     Can be 'anonymous', 'use-credentials', or null to disable CORS.
  */
 function ImageUrlSource(sourceFromTile, opts) {
 
@@ -69,6 +71,7 @@ function ImageUrlSource(sourceFromTile, opts) {
 
   this._retryDelay = opts.retryDelay || defaultRetryDelay;
   this._retryMap = {};
+  this._crossOrigin = opts.crossOrigin;
 
   this._sourceFromTile = sourceFromTile;
 }
@@ -87,7 +90,12 @@ ImageUrlSource.prototype.loadAsset = function(stage, tile, done) {
   var url = tileSource.url;
   var rect = tileSource.rect;
 
-  var loadImage = stage.loadImage.bind(stage, url, rect);
+  var loadOptions = {};
+  if (this._crossOrigin !== undefined) {
+    loadOptions.crossOrigin = this._crossOrigin;
+  }
+  
+  var loadImage = stage.loadImage.bind(stage, url, rect, loadOptions);
 
   var loadFn = function(done) {
     // TODO: Deduplicate load requests for the same URL. Although the browser
@@ -147,6 +155,8 @@ ImageUrlSource.prototype.loadAsset = function(stage, tile, done) {
  *     vertically according to the face order parameter.
  * @param {String} [opts.cubeMapPreviewFaceOrder='bdflru'] Face order within
  *     the preview image.
+ * @param {string} [opts.crossOrigin] Cross-origin mode for image loading.
+ *     Can be 'anonymous', 'use-credentials', or null to disable CORS.
  */
 ImageUrlSource.fromString = function(url, opts) {
   opts = opts || {};

@@ -173,7 +173,21 @@ WebGlStage.prototype.setSizeForType = function() {
 };
 
 
-WebGlStage.prototype.loadImage = function(url, rect, done) {
+WebGlStage.prototype.loadImage = function(url, rect, opts, done) {
+  // Handle backward compatibility: if opts is a function, it's actually the done callback
+  if (typeof opts === 'function') {
+    done = opts;
+    opts = {};
+  }
+  opts = opts || {};
+  
+  // If crossOrigin is specified and different from current loader setting,
+  // create a temporary loader with the specified setting
+  if (opts.crossOrigin !== undefined && opts.crossOrigin !== this._loader._crossOrigin) {
+    var tempLoader = new HtmlImageLoader(this, { crossOrigin: opts.crossOrigin });
+    return tempLoader.loadImage(url, rect, done);
+  }
+  
   return this._loader.loadImage(url, rect, done);
 };
 

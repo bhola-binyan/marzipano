@@ -41,9 +41,14 @@ var createImageBitmapOpts = {
  * A {@link Loader} for HTML images.
  *
  * @param {Stage} stage The stage which is going to request images to be loaded.
+ * @param {Object} [opts] Options.
+ * @param {string} [opts.crossOrigin='anonymous'] Cross-origin mode for image loading.
+ *     Can be 'anonymous', 'use-credentials', or null to disable CORS.
  */
-function HtmlImageLoader(stage) {
+function HtmlImageLoader(stage, opts) {
   this._stage = stage;
+  opts = opts || {};
+  this._crossOrigin = opts.crossOrigin !== undefined ? opts.crossOrigin : 'anonymous';
 }
 
 /**
@@ -69,7 +74,9 @@ HtmlImageLoader.prototype.loadImage = function(url, rect, done) {
   // an Access-Control-Allow-Origin header with a wildcard. See the section
   // "Credentialed requests and wildcards" on:
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-  img.crossOrigin = 'anonymous';
+  if (this._crossOrigin) {
+    img.crossOrigin = this._crossOrigin;
+  }
 
   var x = rect && rect.x || 0;
   var y = rect && rect.y || 0;
