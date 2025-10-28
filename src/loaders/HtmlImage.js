@@ -49,6 +49,10 @@ function HtmlImageLoader(stage, opts) {
   this._stage = stage;
   opts = opts || {};
   this._crossOrigin = opts.crossOrigin !== undefined ? opts.crossOrigin : 'anonymous';
+  console.log('🔍 HtmlImageLoader constructor:', {
+    crossOrigin: this._crossOrigin,
+    opts: opts
+  });
 }
 
 /**
